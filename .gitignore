@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 金鑰：絕不進版控
+.env
+.env.*
+
+# 資料庫：含所有對話事件與人格卡，不進版控
+*.db
+*.db-wal
+*.db-shm
+
+# 產出：人格卡、對話日誌、問卷答案
+persona_sandbox/out/
+
+# 參考用的第三方 repo（clone 下來的，不是本專案程式）
+.repos/
+
+# 瀏覽器暫存
+.chrome-profile/

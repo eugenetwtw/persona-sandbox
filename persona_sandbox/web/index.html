@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>人格沙盒 · Persona Sandbox</title>
+<style>
+  :root{
+    --bg:#0e0f13; --panel:#16181f; --panel2:#1d2029; --line:#2a2e3a;
+    --fg:#e8e9ed; --dim:#9aa0ae; --faint:#6b7280;
+    --accent:#d97757; --accent2:#7aa2f7; --ok:#7fb069; --warn:#e0af68;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;
+    line-height:1.7; -webkit-font-smoothing:antialiased;
+  }
+  header{
+    position:sticky; top:0; z-index:10; background:rgba(14,15,19,.88);
+    backdrop-filter:blur(12px); border-bottom:1px solid var(--line);
+    padding:12px 20px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  }
+  header h1{font-size:15px; margin:0; font-weight:600; letter-spacing:.02em}
+  header .sub{font-size:12px; color:var(--faint)}
+  .badge{
+    font-size:11px; padding:3px 9px; border-radius:20px; border:1px solid var(--line);
+    color:var(--dim); font-family:var(--mono); white-space:nowrap;
+  }
+  .badge.dry{border-color:#6b4a2a; color:var(--warn); background:#241a10}
+  .badge.live{border-color:#2f4a2c; color:var(--ok); background:#131c12}
+  main{max-width:820px; margin:0 auto; padding:28px 20px 80px}
+  .screen{display:none} .screen.active{display:block}
+  h2{font-size:20px; margin:0 0 6px} h3{font-size:14px; margin:22px 0 8px; color:var(--dim);
+     text-transform:uppercase; letter-spacing:.08em; font-weight:600}
+  p.lead{color:var(--dim); margin:0 0 22px}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px; margin:16px 0}
+  .qmeta{font-size:11px; color:var(--faint); font-family:var(--mono); margin-bottom:6px}
+  .qtext{font-size:17px; margin:0 0 14px; font-weight:500}
+  textarea{
+    width:100%; min-height:110px; background:var(--panel2); color:var(--fg);
+    border:1px solid var(--line); border-radius:9px; padding:12px; font:inherit;
+    font-size:14px; resize:vertical;
+  }
+  textarea:focus{outline:none; border-color:var(--accent)}
+  input[type=text]{
+    width:100%; background:var(--panel2); color:var(--fg); border:1px solid var(--line);
+    border-radius:9px; padding:11px 12px; font:inherit; font-size:14px;
+  }
+  input[type=text]:focus{outline:none; border-color:var(--accent)}
+  button{
+    background:var(--accent); color:#16181f; border:none; border-radius:9px;
+    padding:11px 20px; font:inherit; font-size:14px; font-weight:600; cursor:pointer;
+  }
+  button:hover{filter:brightness(1.08)} button:disabled{opacity:.45; cursor:not-allowed}
+  button.ghost{background:transparent; color:var(--dim); border:1px solid var(--line); font-weight:500}
+  button.ghost:hover{color:var(--fg); border-color:var(--faint)}
+  .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:16px}
+  .progress{height:3px; background:var(--line); border-radius:2px; overflow:hidden; margin:18px 0 24px}
+  .progress i{display:block; height:100%; background:var(--accent); transition:width .3s}
+  .followup{border-left:2px solid var(--accent2); padding-left:12px; margin:14px 0 0; color:var(--accent2); font-size:14px}
+  pre.card-md{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:20px; white-space:pre-wrap; word-wrap:break-word; font-size:14px;
+    line-height:1.75; font-family:inherit; margin:16px 0;
+  }
+  .stats{display:flex; gap:8px; flex-wrap:wrap; margin:14px 0}
+  .stat{background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:8px 12px; font-size:12px}
+  .stat b{display:block; font-size:18px; font-family:var(--mono); color:var(--accent)}
+  .stat span{color:var(--faint)}
+  .turn{border:1px solid var(--line); border-radius:12px; margin:14px 0; overflow:hidden}
+  .turn .who{padding:9px 16px; background:var(--panel2); font-size:13px; font-weight:600;
+             display:flex; justify-content:space-between; align-items:center}
+  .turn .who .rnd{font-family:var(--mono); font-size:11px; color:var(--faint); font-weight:400}
+  .turn.player .who{background:#241a10; color:var(--warn)}
+  .mono-block{padding:14px 16px; border-bottom:1px solid var(--line); background:#13151b}
+  .pub-block{padding:14px 16px}
+  .lbl{font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--faint);
+       font-family:var(--mono); margin-bottom:7px}
+  .mono-text{color:#b9a68f; font-style:italic; font-size:13.5px; white-space:pre-wrap}
+  .pub-text{white-space:pre-wrap; font-size:14.5px}
+  .gap-note{font-size:11px; color:var(--faint); margin-top:10px; font-family:var(--mono)}
+  .setting{background:#13151b; border-left:3px solid var(--accent); padding:16px 18px;
+           border-radius:0 10px 10px 0; white-space:pre-wrap; font-size:14px; color:var(--dim); margin:16px 0}
+  .pick{display:flex; gap:12px; flex-wrap:wrap; margin:14px 0}
+  .pick label{flex:1; min-width:200px; background:var(--panel2); border:1px solid var(--line);
+              border-radius:10px; padding:14px; cursor:pointer; font-size:13px}
+  .pick input{margin-right:8px}
+  .pick label:hover{border-color:var(--faint)}
+  .err{background:#2a1616; border:1px solid #5c2a2a; color:#ffb4b4; padding:12px 14px;
+       border-radius:9px; font-size:13px; margin:14px 0; white-space:pre-wrap}
+  .note{font-size:12.5px; color:var(--faint); margin-top:12px}
+  .spin{display:inline-block; width:13px; height:13px; border:2px solid var(--line);
+        border-top-color:var(--accent); border-radius:50%; animation:sp .7s linear infinite;
+        vertical-align:-2px; margin-right:8px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  a{color:var(--accent2)}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <h1>人格沙盒</h1>
+  <span class="sub">Persona Sandbox · MVP</span>
+  <span id="llmBadge" class="badge">檢查中…</span>
+  <span style="flex:1"></span>
+  <button class="ghost hidden" id="restartBtn" onclick="location.reload()">重新開始</button>
+</header>
+
+<main>
+  <div id="err" class="err hidden"></div>
+
+  <!-- 1. 開始 -->
+  <section id="s-intro" class="screen active">
+    <h2>先花 3 分鐘，把你自己蒸餾出來</h2>
+    <p class="lead">
+      接下來有 8 個問題。不用想怎麼講才「對」——講故事就好，越具體越好。<br>
+      蒸餾完你會得到一張人格卡，然後你的分身會被派進一個沙漠避難所，
+      跟兩個歷史人物一起決定誰能活著走出去。
+    </p>
+    <div class="card">
+      <h3 style="margin-top:0">你的代號</h3>
+      <input type="text" id="playerName" placeholder="隨便取，只存在你這台電腦上" maxlength="24">
+      <div class="row">
+        <button id="startBtn" onclick="start()">回答 8 個問題</button>
+        <button class="ghost" onclick="startWithSources()">貼網址，從公開素材蒸餾 →</button>
+      </div>
+      <div class="note">兩條路都可以。問卷測你自己知道的那一面；
+        貼網址測你在網路上留下的那一面。</div>
+    </div>
+  </section>
+
+  <!-- 1b. 素材池 -->
+  <section id="s-sources" class="screen">
+    <h2>丟素材進來</h2>
+    <p class="lead">
+      兩種都可以，也可以混用：<b>貼網址</b>（部落格、X、Medium 效果最好），
+      或<b>上傳檔案</b>（.txt / .md / .csv / .json / .eml / .mbox 匯出）。
+    </p>
+    <div class="card">
+      <h3 style="margin-top:0">① 貼網址</h3>
+      <textarea id="urlBox" style="min-height:120px" placeholder="https://eugenepechang.wordpress.com/
+https://www.youtube.com/@eugenechang1
+https://x.com/eugenepechang"></textarea>
+      <div class="row">
+        <button id="fetchBtn" onclick="fetchSources()">抓取素材</button>
+        <span class="note">Facebook / IG 的頁面抓取被 Firecrawl 政策拒收，會自動改用搜尋代理。</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">② 上傳檔案</h3>
+      <input type="file" id="fileInput" multiple
+             accept=".txt,.md,.markdown,.csv,.tsv,.json,.eml,.mbox,.html,.srt,.vtt,.log">
+      <div class="row">
+        <button id="uploadBtn" onclick="uploadFiles()">上傳檔案</button>
+        <span class="note">Facebook 可從「設定 → 你的 Facebook 資訊 → 下載你的資訊」取得 JSON 後上傳。</span>
+      </div>
+    </div>
+
+    <div id="srcPreview"></div>
+
+    <div class="row" id="poolActions" style="display:none">
+      <button id="distillMatBtn" onclick="distillMaterial()">直接蒸餾 →</button>
+      <button class="ghost" onclick="startInterviewWithPool()">先訪談 8 題，再合併蒸餾 →</button>
+      <button class="ghost" onclick="show('s-intro')">← 回上一步</button>
+    </div>
+    <div class="row" id="poolBack" style="display:flex">
+      <button class="ghost" onclick="show('s-intro')">← 回上一步</button>
+    </div>
+  </section>
+
+  <!-- 2. 問卷 -->
+  <section id="s-ask" class="screen">
+    <div class="progress"><i id="bar" style="width:0%"></i></div>
+    <div class="qmeta" id="qmeta"></div>
+    <p class="qtext" id="qtext"></p>
+    <textarea id="answer" placeholder="講一件具體發生過的事…"></textarea>
+    <div id="followWrap" class="hidden">
+      <div class="followup" id="followText"></div>
+      <textarea id="followAnswer" style="min-height:70px;margin-top:10px"
+                placeholder="再多講一點…"></textarea>
+    </div>
+    <div class="row">
+      <button id="nextBtn" onclick="submitAnswer()">下一題</button>
+      <button class="ghost" onclick="skipQuestion()">跳過這題</button>
+      <span class="note" id="askNote"></span>
+    </div>
+  </section>
+
+  <!-- 3. 蒸餾中 -->
+  <section id="s-distill" class="screen">
+    <h2><span class="spin"></span>蒸餾中…</h2>
+    <p class="lead" id="distillNote">正在從你的回答抽取行為模式。這需要幾十秒。</p>
+  </section>
+
+  <!-- 4. 人格卡 -->
+  <section id="s-card" class="screen">
+    <h2 id="cardTitle">這是你嗎？</h2>
+    <p class="lead">看著不對的地方直接說，越具體越好。（例如：「我不會直接說不，我通常是已讀不回」）</p>
+    <div class="stats" id="cardStats"></div>
+    <pre class="card-md" id="cardMd"></pre>
+    <div class="card">
+      <h3 style="margin-top:0">修正</h3>
+      <textarea id="feedback" placeholder="哪裡不對？"></textarea>
+      <div class="row">
+        <button id="correctBtn" onclick="submitCorrection()">送出修正</button>
+        <button class="ghost" onclick="goWorld()">沒問題，進入世界 →</button>
+      </div>
+      <div class="note" id="correctionLog"></div>
+    </div>
+  </section>
+
+  <!-- 5. 世界 -->
+  <section id="s-world" class="screen">
+    <h2 id="worldName"></h2>
+    <p class="lead" id="worldStakes"></p>
+    <h3>選一個場景</h3>
+    <div class="pick" id="scenarioPick"></div>
+    <div class="setting" id="worldSetting"></div>
+    <h3>同場的人</h3>
+    <div class="pick" id="witnessPick"></div>
+    <div class="row">
+      <button onclick="startEncounter()">進入</button>
+      <span class="note">發言順序：你 → 蘇格拉底 → 老子，共 15 輪。</span>
+    </div>
+  </section>
+
+  <!-- 6. 對話 -->
+  <section id="s-play" class="screen">
+    <div class="row" style="margin-top:0">
+      <button id="turnBtn" onclick="nextTurn()">下一輪</button>
+      <button class="ghost" onclick="autoRun()">自動跑完</button>
+      <button class="ghost" id="finishBtn" onclick="finish()">結束並存檔</button>
+      <span class="note" id="playNote"></span>
+    </div>
+    <div id="turns"></div>
+    <div id="endBox" class="card hidden"></div>
+  </section>
+</main>
+
+<script>
+const S = {sid:null, encSid:null, name:"", questions:[], qi:0, answers:[], card:null, dry:false, running:false, docs:null};
+
+const $ = id => document.getElementById(id);
+const show = id => document.querySelectorAll(".screen").forEach(s =>
+  s.classList.toggle("active", s.id === id));
+
+function fail(e){
+  const box = $("err");
+  box.textContent = (e && e.message) ? e.message : String(e);
+  box.classList.remove("hidden");
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+const clearErr = () => $("err").classList.add("hidden");
+
+async function api(path, body){
+  const opt = body
+    ? {method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(body)}
+    : {};
+  const r = await fetch(path, opt);
+  const data = await r.json().catch(() => ({}));
+  if(!r.ok) throw new Error(data.error || (r.status + " " + r.statusText));
+  return data;
+}
+
+// ---------------------------------------------------------------- 啟動
+async function boot(){
+  try{
+    const p = await api("/api/providers");
+    S.dry = p.dry_run;
+    const b = $("llmBadge");
+    if(p.dry_run){
+      b.className = "badge dry";
+      b.textContent = "DRY-RUN · 未設定 API 金鑰";
+      b.title = "設定 DEEPSEEK_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY 後重啟伺服器即可真實蒸餾";
+    }else{
+      b.className = "badge live";
+      b.textContent = (p.active || "") + " · " + (p.model || "default");
+    }
+    const q = await api("/api/questions");
+    S.questions = q.questions;
+  }catch(e){ fail(e); }
+}
+boot();
+
+async function startWithSources(){
+  clearErr();
+  S.name = ($("playerName").value || "").trim();
+  if(!S.name){
+    $("playerName").focus();
+    return fail(new Error("先幫自己取個代號，蒸餾出來的報告才有名字"));
+  }
+  try{
+    const r = await api("/api/session", {name:S.name});
+    S.sid = r.session_id;
+    $("restartBtn").classList.remove("hidden");
+    show("s-sources");
+  }catch(e){ fail(e); }
+}
+
+const STATUS_LABEL = {
+  ok:"✅ 抓到", search_fallback:"🟡 只有搜尋摘要",
+  blocked:"⛔ 被封鎖", empty:"⚠️ 登入牆/空殼", error:"❌ 失敗", pending:"…"
+};
+
+function renderPool(cov){
+  const cards = (S.docs||[]).map(d=>`
+    <div class="card">
+      <div class="qmeta">${STATUS_LABEL[d.status]||d.status} · ${esc(d.kind)} · ${d.chars} 字</div>
+      <div style="font-weight:600;margin:4px 0">${esc(d.title||d.url)}</div>
+      <div class="note" style="word-break:break-all">${esc(d.url)}</div>
+      ${d.note?`<div class="gap-note" style="margin-top:8px">${esc(d.note)}</div>`:""}
+    </div>`).join("");
+  const byKind = Object.entries(cov.by_kind||{}).map(([k,v])=>`${k}×${v}`).join("、");
+  $("srcPreview").innerHTML = `
+    <div class="stats">
+      <div class="stat"><b>${cov.usable}</b><span>可用素材</span></div>
+      <div class="stat"><b>${cov.total_chars}</b><span>素材字數</span></div>
+      <div class="stat"><b>${(cov.by_status&&cov.by_status.error)||0}</b><span>抓取失敗</span></div>
+    </div>
+    ${byKind?`<div class="note">組成：${esc(byKind)}</div>`:""}
+    ${cards}`;
+}
+
+async function fetchSources(){
+  clearErr();
+  const urls = $("urlBox").value.split(/[\n,]/).map(s=>s.trim()).filter(Boolean);
+  if(!urls.length) return fail(new Error("請至少貼一個網址"));
+  $("fetchBtn").disabled = true; $("fetchBtn").textContent = "抓取中…";
+  try{
+    const r = await api("/api/fetch-sources", {session_id:S.sid, urls});
+    S.docs = (S.docs||[]).concat(r.docs);
+    renderPool(r.coverage);
+    $("poolActions").style.display = "flex";
+    $("poolBack").style.display = "none";
+    $("urlBox").value = "";
+  }catch(e){ fail(e); }
+  $("fetchBtn").disabled = false; $("fetchBtn").textContent = "抓取素材";
+}
+
+async function uploadFiles(){
+  clearErr();
+  const inp = $("fileInput");
+  if(!inp.files.length) return fail(new Error("先選檔案"));
+  const fd = new FormData();
+  fd.append("session_id", S.sid);
+  for(const f of inp.files) fd.append("files", f, f.name);
+  $("uploadBtn").disabled = true; $("uploadBtn").textContent = "上傳解析中…";
+  try{
+    const r = await fetch("/api/upload", {method:"POST", body:fd}).then(async x=>{
+      const d = await x.json().catch(()=>({}));
+      if(!x.ok) throw new Error(d.error || x.statusText);
+      return d;
+    });
+    S.docs = (S.docs||[]).concat(r.docs);
+    renderPool(r.coverage);
+    $("poolActions").style.display = "flex";
+    $("poolBack").style.display = "none";
+    inp.value = "";
+  }catch(e){ fail(e); }
+  $("uploadBtn").disabled = false; $("uploadBtn").textContent = "上傳檔案";
+}
+
+async function distillMaterial(answers){
+  clearErr();
+  show("s-distill");
+  $("distillNote").textContent = (answers && answers.length)
+    ? "正在合併公開素材與你的問卷自述…"
+    : "正在從公開素材抽取行為模式與思考方式…";
+  try{
+    const r = await api("/api/distill-material",
+      {session_id:S.sid, name:S.name, answers: answers||[]});
+    $("cardMd").textContent = r.card_markdown;
+    const ev = r.evidence||{}, cov = r.coverage||{};
+    $("cardStats").innerHTML = `
+      <div class="stat"><b>${cov.usable||0}</b><span>公開素材</span></div>
+      <div class="stat"><b>${cov.total_chars||0}</b><span>素材字數</span></div>
+      <div class="stat"><b>${cov.questionnaire_chars||0}</b><span>問卷字數</span></div>
+      <div class="stat"><b>${ev.verbatim||0}</b><span>原話證據</span></div>
+      <div class="stat"><b>${ev.pattern||0}</b><span>行為模式</span></div>
+      <div class="stat"><b>${ev.insufficient||0}</b><span>素材不足</span></div>`;
+    $("cardTitle").textContent = "這是你嗎？";
+    show("s-card");
+  }catch(e){ fail(e); show("s-sources"); }
+}
+
+function startInterviewWithPool(){
+  clearErr();
+  const have = (S.docs||[]).filter(d=>d.status==="ok"||d.status==="search_fallback").length;
+  S.mode = "interview-then-material";
+  S.qi = 0; S.answers = [];
+  show("s-ask");
+  renderQuestion();
+  $("askNote").textContent = have
+    ? `已備好 ${have} 份公開素材，訪談完會合併蒸餾。`
+    : "這次只會用你的問卷作答。";
+}
+
+// ---------------------------------------------------------------- 問卷
+async function start(){
+  clearErr();
+  S.name = ($("playerName").value || "").trim() || "匿名玩家";
+  try{
+    const r = await api("/api/session", {name:S.name});
+    S.sid = r.session_id;
+    S.qi = 0; S.answers = [];
+    $("restartBtn").classList.remove("hidden");
+    show("s-ask"); renderQuestion();
+  }catch(e){ fail(e); }
+}
+
+function renderQuestion(){
+  const q = S.questions[S.qi];
+  $("bar").style.width = (S.qi / S.questions.length * 100) + "%";
+  $("qmeta").textContent = `第 ${S.qi+1} / ${S.questions.length} 題 · 抽取意圖：${q.intent}`;
+  $("qtext").textContent = q.text;
+  $("answer").value = "";
+  $("followWrap").classList.add("hidden");
+  $("followAnswer").value = "";
+  $("nextBtn").disabled = false;
+  $("askNote").textContent = "不想答就跳過，不會怎樣。";
+  $("answer").focus();
+}
+
+async function submitAnswer(){
+  const q = S.questions[S.qi];
+  const text = $("answer").value.trim();
+  const follow = $("followWrap").classList.contains("hidden") ? "" : $("followAnswer").value.trim();
+
+  // 太短 -> 追問一次
+  if(q.follow_up && !follow && text.length > 0 && text.length < q.follow_up.min_chars){
+    const prompts = q.follow_up.prompts;
+    const pick = prompts[Math.floor(Math.random()*prompts.length)];
+    $("followText").textContent = "↳ " + pick;
+    $("followWrap").classList.remove("hidden");
+    $("followAnswer").focus();
+    return;
+  }
+
+  S.answers.push({qid:q.id, text:text, follow_ups: follow ? [follow] : [], skipped: !text});
+  try{ await api("/api/answer", {session_id:S.sid, qid:q.id, text, follow_up:follow}); }
+  catch(e){ /* 不阻斷流程 */ }
+
+  S.qi++;
+  if(S.qi >= S.questions.length) return doDistill();
+  renderQuestion();
+}
+
+function skipQuestion(){
+  const q = S.questions[S.qi];
+  S.answers.push({qid:q.id, text:"", follow_ups:[], skipped:true});
+  api("/api/answer", {session_id:S.sid, qid:q.id, skipped:true}).catch(()=>{});
+  S.qi++;
+  if(S.qi >= S.questions.length) return doDistill();
+  renderQuestion();
+}
+
+// ---------------------------------------------------------------- 蒸餾
+async function doDistill(){
+  // 有素材池的訪談 → 合併蒸餾（公開素材 決定行為，問卷自述補充）
+  if(S.mode === "interview-then-material"){
+    return distillMaterial(S.answers);
+  }
+  show("s-distill");
+  $("distillNote").textContent = S.dry
+    ? "DRY-RUN 模式：沒有 API 金鑰，會產出結構骨架（不是真實蒸餾結果）。"
+    : "正在從你的回答抽取行為模式，這需要幾十秒。";
+  try{
+    const r = await api("/api/distill", {session_id:S.sid, name:S.name, answers:S.answers});
+    S.card = r.card_markdown;
+    $("cardMd").textContent = r.card_markdown;
+    const ev = r.evidence || {};
+    $("cardStats").innerHTML = `
+      <div class="stat"><b>${(r.coverage||{}).total_chars||0}</b><span>素材字數</span></div>
+      <div class="stat"><b>${(ev.verbatim||0)}</b><span>原話證據</span></div>
+      <div class="stat"><b>${(ev.pattern||0)}</b><span>行為模式</span></div>
+      <div class="stat"><b>${(ev.impression||0)}</b><span>自我描述</span></div>
+      <div class="stat"><b>${(ev.insufficient||0)}</b><span>原材料不足</span></div>`;
+    $("cardTitle").textContent = "這是你嗎？";
+    show("s-card");
+  }catch(e){ fail(e); show("s-ask"); }
+}
+
+async function submitCorrection(){
+  const fb = $("feedback").value.trim();
+  if(!fb){ return; }
+  clearErr();
+  $("correctBtn").disabled = true;
+  $("correctBtn").textContent = "處理中…";
+  try{
+    const r = await api("/api/correct", {session_id:S.sid, feedback:fb});
+    S.card = r.card_markdown;
+    $("cardMd").textContent = r.card_markdown;
+    $("feedback").value = "";
+    const lang = r.acknowledgement ? `💬 ${r.acknowledgement}　` : "";
+    $("correctionLog").textContent =
+      lang + `已累積 ${(r.corrections||[]).length} 筆修正紀錄。`;
+  }catch(e){ fail(e); }
+  $("correctBtn").disabled = false;
+  $("correctBtn").textContent = "送出修正";
+}
+
+// ---------------------------------------------------------------- 世界
+async function goWorld(){
+  clearErr();
+  try{
+    const r = await api("/api/scenarios");
+    S.scenarios = r.scenarios;
+    S.scenarioId = r.scenarios[0].id;
+    renderScenarioPicker();
+    show("s-world");
+  }catch(e){ fail(e); }
+}
+
+function renderScenarioPicker(){
+  const list = S.scenarios || [];
+  $("scenarioPick").innerHTML = list.map((sc,i)=>`
+    <label><input type="radio" name="scen" value="${sc.id}" ${i===0?"checked":""}
+      onchange="selectScenario('${sc.id}')">
+      <b>${esc(sc.name)}</b><br>
+      <span style="color:#6b7280">${esc(sc.stakes).slice(0,52)}…</span>
+    </label>`).join("");
+  selectScenario(list[0].id);
+}
+
+function selectScenario(id){
+  const sc = (S.scenarios||[]).find(x=>x.id===id);
+  if(!sc) return;
+  S.scenarioId = id;
+  $("worldName").textContent = sc.name;
+  $("worldStakes").textContent = sc.stakes;
+  $("worldSetting").textContent = sc.setting;
+  $("witnessPick").innerHTML = sc.witnesses.map(w => `
+    <label><input type="checkbox" value="${w.id}" ${w.default?"checked":""}>
+      <b>${esc(w.name)}</b><br>
+      <span style="color:#6b7280">${esc(w.era)} · ${esc(w.archetype)}</span>
+    </label>`).join("");
+}
+
+async function startEncounter(){
+  const picked = [...document.querySelectorAll("#witnessPick input:checked")].map(i => i.value);
+  if(!picked.length) return fail(new Error("至少要選一個同場的人"));
+  clearErr();
+  try{
+    const r = await api("/api/encounter", {session_id:S.sid, witnesses:picked,
+      scenario_id:S.scenarioId, max_rounds:16});
+    S.encSid = r.session_id;
+    $("worldSetting").textContent = r.setting;
+    $("turns").innerHTML = "";
+    $("endBox").classList.add("hidden");
+    $("playNote").textContent = "按「下一輪」推進。";
+    show("s-play");
+    await nextTurn();
+  }catch(e){ fail(e); }
+}
+
+// ---------------------------------------------------------------- 對話
+function renderTurn(t){
+  const gap = gapNote(t);
+  const el = document.createElement("div");
+  el.className = "turn" + (t.is_player ? " player" : "");
+  el.innerHTML = `
+    <div class="who"><span>${esc(t.speaker)}${t.is_player ? "（你）" : ""}</span>
+      <span class="rnd">第 ${t.round} 輪</span></div>
+    <div class="mono-block"><div class="lbl">內在獨白 · 沒人聽得到</div>
+      <div class="mono-text">${esc(t.monologue)}</div></div>
+    <div class="pub-block"><div class="lbl">對外發言</div>
+      <div class="pub-text">${esc(t.public)}</div>${gap}</div>`;
+  $("turns").appendChild(el);
+  el.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+function gapNote(t){
+  const m = t.monologue || "", p = t.public || "";
+  if(/未輸出內在獨白/.test(m)) return `<div class="gap-note">⚠ 這輪沒輸出獨白，無法比對落差</div>`;
+  const denials = /(不說|隱瞞|不告訴|裝|假裝|撒謊|留一手|不承認|避重就輕|沉默|不說實話)/;
+  if(denials.test(m) && !denials.test(p))
+    return `<div class="gap-note">↯ 獨白與發言不一致——他隱瞞了什麼</div>`;
+  return "";
+}
+
+const esc = s => (s||"").replace(/[&<>"']/g, c =>
+  ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+async function nextTurn(){
+  if(S.running) return;
+  S.running = true;
+  $("turnBtn").disabled = true;
+  try{
+    const r = await api("/api/turn", {session_id:S.encSid||S.sid});
+    if(!r.turn){
+      $("playNote").textContent = "對話已結束：" + (r.ended_reason || "");
+      $("turnBtn").disabled = true;
+      return;
+    }
+    renderTurn(r.turn);
+    $("playNote").textContent = r.finished
+      ? "已結束：" + (r.ended_reason || "")
+      : `下一位：${r.next_speaker || "—"}`;
+    $("turnBtn").disabled = !!r.finished;
+  }catch(e){ fail(e); }
+  S.running = false;
+}
+
+async function autoRun(){
+  if(S.running) return;
+  S.running = true;
+  $("turnBtn").disabled = true; $("finishBtn").disabled = true;
+  let guard = 0;
+  try{
+    while(guard++ < 60){
+      const r = await api("/api/turn", {session_id:S.encSid||S.sid});
+      if(!r.turn){
+        $("playNote").textContent = "對話已結束：" + (r.ended_reason || "");
+        break;
+      }
+      renderTurn(r.turn);
+      $("playNote").textContent = r.finished
+        ? "已結束：" + (r.ended_reason || "")
+        : `下一位：${r.next_speaker || "—"}`;
+      if(r.finished) break;
+    }
+  }catch(e){ fail(e); }
+  S.running = false;
+  $("finishBtn").disabled = false;
+}
+
+async function finish(){
+  clearErr();
+  try{
+    const r = await api("/api/finish", {session_id:S.encSid||S.sid});
+    const box = $("endBox");
+    box.classList.remove("hidden");
+    box.innerHTML = `<h3 style="margin-top:0">日誌已存檔</h3>
+      <p class="note" style="font-size:13px">
+        JSON：<code>${esc(r.json)}</code><br>Markdown：<code>${esc(r.markdown)}</code></p>`;
+    box.scrollIntoView({behavior:"smooth"});
+  }catch(e){ fail(e); }
+}
+
+// 快捷鍵
+document.addEventListener("keydown", e => {
+  if(e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+    if($("s-ask").classList.contains("active")) submitAnswer();
+    else if($("s-card").classList.contains("active")) submitCorrection();
+  }
+});
+</script>
+</body>
+</html>
