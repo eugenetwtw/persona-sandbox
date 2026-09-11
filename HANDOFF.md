@@ -6,7 +6,7 @@
 
 ---
 
-## 0. 三件要先知道的事
+## 0. 四件要先知道的事
 
 **1. 有兩把 API 金鑰在 `.env` 裡，其中一把曾經出現在對話紀錄中，必須輪替。**
 
@@ -18,10 +18,13 @@
 `.env` 權限是 `600`，已被 `.gitignore` 排除，程式碼裡沒有金鑰。但**金鑰本身應該視為已洩漏**。
 輪替方式：到後台重新產生，然後 `python3 -m persona_sandbox setup` 或直接改 `.env`。
 
-**2. 伺服器現在正在跑**：http://127.0.0.1:8800（背景 job `bash-10`）。
+**2. 程式碼在 GitHub 上**：https://github.com/eugenetwtw/persona-sandbox
+目前是**公開** repo（隨時可以改回私有）。只推了程式碼與文件；`out/`、`persona_sandbox.db`、`.env` 都被 `.gitignore` 排除。
+
+**3. 伺服器在本機跑**：http://127.0.0.1:8800。
 它是本機服務，不是產品。沒有 auth、沒有佇列、沒有錯誤監控。
 
-**3. 這是一個「驗證概念」的 MVP，不是可以上線的東西。**
+**4. 這是一個「驗證概念」的 MVP，不是可以上線的東西。**
 它的唯一目的是回答一個問題：**「把一個人蒸餾成 AI，然後讓他跟別人碰撞，好不好玩、準不準？」**
 這個問題目前只被非正式地回答過（使用者自己看過幾份輸出）。**沒有量化評估。**
 
@@ -54,7 +57,8 @@
 ## 2. 快速開始
 
 ```bash
-cd /Users/pe/Downloads/persona-distill
+git clone https://github.com/eugenetwtw/persona-sandbox.git
+cd persona-sandbox
 
 # 看金鑰狀態
 python3 -m persona_sandbox providers
@@ -74,8 +78,8 @@ python3 -m persona_sandbox ask                 # 互動問卷
 # 資料庫
 python3 -m persona_sandbox db stats
 python3 -m persona_sandbox db users
-python3 -m persona_sandbox db cards --user 張渝江
-python3 -m persona_sandbox db export 張渝江     # 完整匯出（含對話史）
+python3 -m persona_sandbox db cards --user alice
+python3 -m persona_sandbox db export alice     # 完整匯出（含對話史）
 ```
 
 **零依賴**：只用 Python 標準庫（3.9+，開發環境 3.13）。沒有 requirements.txt 要裝。
@@ -258,7 +262,7 @@ persona_sandbox/
 | `jobs` | 賈伯斯 | 對抗型 | 史丹佛演講、發表會、Isaacson 傳記 |
 | `marilyn` | 瑪麗蓮·夢露 | 誘惑型 | 《My Story》、1962 Life 專訪、私人筆記 |
 
-**已產出的人格卡**：`out/cards/`（張渝江、我自己、示範玩家等）
+**已產出的人格卡**：`out/cards/`（alice、我自己、示範玩家等）
 **已產出的劇本**：`out/logs/`（含兩份手工排版的完整劇本）
 
 ---
@@ -362,7 +366,7 @@ worker 領一個 → 讀狀態 → 1 次 LLM → 寫 turns → 算下次時間 �
 pkill -f "persona_sandbox.server"
 
 # 2. 啟動（背景）
-cd /Users/pe/Downloads/persona-distill
+cd /path/to/persona-distill
 nohup python3 -m persona_sandbox.server --port 8800 > /tmp/persona-server.log 2>&1 &
 
 # 3. 驗證
@@ -380,7 +384,7 @@ python3 -m persona_sandbox db stats
 Persona Sandbox MVP
   → http://127.0.0.1:8800
   LLM: deepseek / deepseek-chat
-  DB : /Users/pe/Downloads/persona-distill/persona_sandbox.db  (616.0 KB)
+  DB : /path/to/persona-distill/persona_sandbox.db  (616.0 KB)
        使用者 7 · session 22 · 事件 142 · 回合 91 · 人格卡 12
 ```
 

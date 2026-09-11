@@ -13,7 +13,7 @@
 零依賴，只要 Python 3.9+（開發環境用 3.13）。
 
 ```bash
-cd /Users/pe/Downloads/persona-distill
+cd /path/to/persona-distill
 
 # 1. 看有沒有可用的 LLM 金鑰
 python3 -m persona_sandbox providers
